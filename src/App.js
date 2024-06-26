@@ -1,17 +1,20 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'; // Cambiado de Switch a Routes
 import TrainingPlanList from './components/TrainingPlanList';
-import MesocycleList from './components/MesocyclesList';
-import MicrocycleList from './components/MicrocyclesList';
+import MesocyclesList from './components/MesocyclesList';
+import MicrocyclesList from './components/MicrocyclesList';
 
-const App = () => (
-  <Router>
-    <Routes>
-      <Route path="/" element={<TrainingPlanList />} />
-      <Route path="/training-plans" element={<TrainingPlanList />} />
-      <Route path="/mesocycles/:trainingPlanId" element={<MesocycleList />} />
-      <Route path="/microcycles/:trainingPlanId" element={<MicrocycleList />} />
-    </Routes>
-  </Router>
-);
+const App = () => {
+  return (
+    <Router>
+      <Routes> {}
+        <Route path="/" element={<TrainingPlanList />} />
+        <Route path="/training-plans" element={<TrainingPlanList />} />
+        <Route path="/training-plans/:trainingPlanId/mesocycles" element={<MesocyclesList />} />
+        <Route path="/training-plans/:trainingPlanId/mesocycles/:mesocycleId/microcycles" element={<MicrocyclesList />} />
+      </Routes> {}
+    </Router>
+  );
+};
 
 export default App;

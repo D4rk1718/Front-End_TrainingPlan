@@ -5,12 +5,13 @@ import { FaEdit, FaTrashAlt, FaPlus, FaEye } from 'react-icons/fa';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
 import { Modal } from 'bootstrap';
+import moment from 'moment';  // Importing moment.js
 
 const TrainingPlanList = () => {
   const [trainingPlans, setTrainingPlans] = useState([]);
   const [editingPlanId, setEditingPlanId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '', mesocycles: [] });
-  const [newPlanData, setNewPlanData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', fechaInicio: '', fechaFin: '', mesocycles: [] });
+  const [newPlanData, setNewPlanData] = useState({ name: '', description: '', fechaInicio: '', fechaFin: '' });
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const createPlanModalRef = useRef(null);
@@ -46,7 +47,13 @@ const TrainingPlanList = () => {
 
   const handleEditClick = (plan) => {
     setEditingPlanId(plan.id);
-    setFormData({ name: plan.name || '', description: plan.description || '', mesocycles: plan.mesocycles || [] });
+    setFormData({
+      name: plan.name || '',
+      description: plan.description || '',
+      fechaInicio: plan.fechaInicio || '',
+      fechaFin: plan.fechaFin || '',
+      mesocycles: plan.mesocycles || []
+    });
   };
 
   const handleEditChange = (e) => {
@@ -85,7 +92,7 @@ const TrainingPlanList = () => {
     setNewPlanData({ ...newPlanData, [e.target.name]: e.target.value });
   };
 
-  const handleCreateSubmit = async (e) => {
+  const handleCreateSubmit = async (e) => { 
     e.preventDefault();
     try {
       const existingPlan = trainingPlans.find(plan => plan.name.toLowerCase() === newPlanData.name.toLowerCase());
@@ -94,9 +101,18 @@ const TrainingPlanList = () => {
         setTimeout(() => setErrorMessage(''), 3000);
         return;
       }
+      const currentDate = moment().startOf('day');  // Getting the current date
+      const startDate = moment(newPlanData.fechaInicio);
+
+      if (startDate.isBefore(currentDate)) {
+        setErrorMessage('La fecha de inicio no puede ser anterior a la fecha actual.');
+        setTimeout(() => setErrorMessage(''), 3000);
+        return;
+      }
+
       const response = await axios.post('http://localhost:8080/training-plans', newPlanData);
       if (response.status === 200 || response.status === 201) {
-        setNewPlanData({ name: '', description: '' });
+        setNewPlanData({ name: '', description: '', fechaInicio: '', fechaFin: '' });
         fetchTrainingPlans();
         setSuccessMessage('Plan de entrenamiento creado exitosamente');
         setTimeout(() => setSuccessMessage(''), 3000);
@@ -145,6 +161,8 @@ const TrainingPlanList = () => {
           <tr>
             <th>Nombre</th>
             <th>Descripción</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
             <th>Acciones</th>
             <th>Ver</th>
           </tr>
@@ -153,7 +171,7 @@ const TrainingPlanList = () => {
           {trainingPlans.map(plan => (
             <tr key={plan.id}>
               {editingPlanId === plan.id ? (
-                <td colSpan="4">
+                <td colSpan="6">
                   <form onSubmit={handleEditSubmit}>
                     <div className="form-group">
                       <label htmlFor="name">Nombre</label>
@@ -163,6 +181,14 @@ const TrainingPlanList = () => {
                       <label htmlFor="description">Descripción</label>
                       <input type="text" className="form-control" id="description" name="description" value={formData.description} onChange={handleEditChange} required />
                     </div>
+                    <div className="form-group">
+                      <label htmlFor="fechaInicio">Fecha Inicio</label>
+                      <input type="date" className="form-control" id="fechaInicio" name="fechaInicio" value={formData.fechaInicio} onChange={handleEditChange} required />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="fechaFin">Fecha Fin</label>
+                      <input type="date" className="form-control" id="fechaFin" name="fechaFin" value={formData.fechaFin} onChange={handleEditChange} required />
+                    </div>
                     <button type="submit" className="btn btn-primary">Guardar</button>
                     <button type="button" className="btn btn-secondary ml-2" onClick={handleCancelEdit}>Cancelar</button>
                   </form>
@@ -171,6 +197,8 @@ const TrainingPlanList = () => {
                 <>
                   <td>{plan.name}</td>
                   <td>{plan.description}</td>
+                  <td>{moment(plan.fechaInicio).format('YYYY-MM-DD')}</td> {/* Formatting date */}
+                  <td>{moment(plan.fechaFin).format('YYYY-MM-DD')}</td> {/* Formatting date */}
                   <td>
                     <button onClick={() => handleEditClick(plan)} className="btn btn-secondary mr-2">
                       <FaEdit />
@@ -180,10 +208,9 @@ const TrainingPlanList = () => {
                     </button>
                   </td>
                   <td>
-                    <Link to={`/mesocycles/${plan.id}`} className="btn btn-primary mr-2">
-                      <FaEye /> Ver Mesociclos
+                    <Link to={`/training-plans/${plan.id}/mesocycles`} className="btn btn-primary mr-2">
+                      <FaEye /> View Mesocycles
                     </Link>
-                    
                   </td>
                 </>
               )}
@@ -192,25 +219,35 @@ const TrainingPlanList = () => {
         </tbody>
       </table>
 
-      {/* Modal para crear nuevo plan de entrenamiento */}
-      <div className="modal fade" id="createPlanModal" tabIndex="-1" aria-labelledby="createPlanModalLabel" aria-hidden="true" ref={createPlanModalRef}>
-        <div className="modal-dialog">
+      {/* Modal for creating a new training plan */}
+      <div className="modal fade" ref={createPlanModalRef} tabIndex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title" id="createPlanModalLabel">Crear Plan de Entrenamiento</h5>
-              <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <h5 className="modal-title" id="exampleModalLabel">Crear Nuevo Plan de Entrenamiento</h5>
+              <button type="button" className="close" data-bs-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleCreateSubmit}>
                 <div className="form-group">
-                  <label htmlFor="createName">Nombre</label>
-                  <input type="text" className="form-control" id="createName" name="name" value={newPlanData.name} onChange={handleCreateChange} required />
+                  <label htmlFor="name">Nombre</label>
+                  <input type="text" className="form-control" id="name" name="name" value={newPlanData.name} onChange={handleCreateChange} required />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="createDescription">Descripción</label>
-                  <input type="text" className="form-control" id="createDescription" name="description" value={newPlanData.description} onChange={handleCreateChange} required />
+                  <label htmlFor="description">Descripción</label>
+                  <input type="text" className="form-control" id="description" name="description" value={newPlanData.description} onChange={handleCreateChange} required />
                 </div>
-                <button type="submit" className="btn btn-primary">Crear Plan de Entrenamiento</button>
+                <div className="form-group">
+                  <label htmlFor="fechaInicio">Fecha Inicio</label>
+                  <input type="date" className="form-control" id="fechaInicio" name="fechaInicio" value={newPlanData.fechaInicio} onChange={handleCreateChange} required />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="fechaFin">Fecha Fin</label>
+                  <input type="date" className="form-control" id="fechaFin" name="fechaFin" value={newPlanData.fechaFin} onChange={handleCreateChange} required />
+                </div>
+                <button type="submit" className="btn btn-primary">Crear</button>
               </form>
             </div>
           </div>
